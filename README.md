@@ -20,3 +20,13 @@
 
 김민태의 프론트엔드 아카데미 : 제 1강 JavaScript & TypeScriptEssential 강의를 배우고 있습니다.  
 typescript의 공부가 필요하다 느껴 예전에 사놓았던 강의를 배우고 있는 중입니다.
+
+## 실행 방법
+
+1. 해당 프로젝트(레포지토리)를 로컬환경에 클론합니다.
+
+```bash
+git clone https://github.com/Seulji-jo/Studies.git
+```
+
+2. 실행시키고 싶은 프로젝트/공부에 들어가셔서 README의 실행방법을 따라합니다.
