@@ -26,14 +26,17 @@ window.addEventListener("hashchange", function () {
 });
 
 newsFeed.map((news) => {
-  const $li = document.createElement("li");
-  const $a = document.createElement("a");
+  const $div = document.createElement("div");
 
-  $a.href = `#${news.id}`; // hash
-  $a.innerHTML = `${news.title} (${news.comments_count})`;
+  $div.innerHTML = `
+  <li>
+    <a href="#${news.id}">
+      ${news.title} (${news.comments_count})
+    </a>
+  </li>
+  `;
 
-  $li.appendChild($a);
-  $ul.appendChild($li);
+  $ul.appendChild($div.firstElementChild);
 });
 
 container.appendChild($ul);
