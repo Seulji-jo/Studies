@@ -16,29 +16,31 @@ const newsFeed = getData(NEWS_URL);
 const $ul = document.createElement("ul");
 
 window.addEventListener("hashchange", function () {
-  const id = location.hash.substring(1);
+  const id = location.hash.slice(1);
+  console.log(id);
 
   const newsContent = getData(CONTENT_URL.replace("@id", id));
-  const title = document.createElement("h1");
 
-  title.innerHTML = newsContent.title;
-
-  content.appendChild(title);
+  container.innerHTML = `
+    <h1>${newsContent.title}</h1>
+    <div>
+      <a href="#">목록으로</a>
+    </div>
+  `;
 });
 
-newsFeed.map((news) => {
-  const $div = document.createElement("div");
+const newsList = [];
 
-  $div.innerHTML = `
+newsList.push("<ul>");
+newsFeed.map((news) => {
+  newsList.push(`
   <li>
     <a href="#${news.id}">
       ${news.title} (${news.comments_count})
     </a>
   </li>
-  `;
-
-  $ul.appendChild($div.firstElementChild);
+  `);
 });
+newsList.push("</ul>");
 
-container.appendChild($ul);
-container.appendChild(content);
+container.innerHTML = newsList.join("");
