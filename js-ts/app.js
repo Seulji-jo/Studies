@@ -11,14 +11,27 @@ function getData(url) {
   return JSON.parse(ajax.response);
 }
 
-const newsFeed = getData(NEWS_URL);
+function newsFeed() {
+  const newsFeed = getData(NEWS_URL);
+  const newsList = [];
 
-const $ul = document.createElement("ul");
+  newsList.push("<ul>");
+  newsFeed.map((news) => {
+    newsList.push(`
+  <li>
+    <a href="#${news.id}">
+      ${news.title} (${news.comments_count})
+    </a>
+  </li>
+  `);
+  });
+  newsList.push("</ul>");
 
-window.addEventListener("hashchange", function () {
+  container.innerHTML = newsList.join("");
+}
+
+function newsDetail() {
   const id = location.hash.slice(1);
-  console.log(id);
-
   const newsContent = getData(CONTENT_URL.replace("@id", id));
 
   container.innerHTML = `
@@ -27,20 +40,17 @@ window.addEventListener("hashchange", function () {
       <a href="#">목록으로</a>
     </div>
   `;
-});
+}
 
-const newsList = [];
+function router() {
+  const routePath = location.hash;
 
-newsList.push("<ul>");
-newsFeed.map((news) => {
-  newsList.push(`
-  <li>
-    <a href="#${news.id}">
-      ${news.title} (${news.comments_count})
-    </a>
-  </li>
-  `);
-});
-newsList.push("</ul>");
+  if (routePath === "") {
+    newsFeed();
+  } else {
+    newsDetail();
+  }
+}
 
-container.innerHTML = newsList.join("");
+window.addEventListener("hashchange", router);
+router();
