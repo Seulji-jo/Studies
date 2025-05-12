@@ -17,6 +17,8 @@ function getData(url) {
 function newsFeed() {
   const newsFeed = getData(NEWS_URL);
   const newsList = [];
+  const totalPage =
+    newsFeed.length % 10 ? newsFeed.length / 10 + 1 : newsFeed.length / 10;
 
   newsList.push("<ul>");
 
@@ -32,8 +34,12 @@ function newsFeed() {
   newsList.push("</ul>");
   newsList.push(`
     <div>
-      <a href="#/page/${store.currPage - 1}">이전 페이지</a>
-      <a href="#/page/${store.currPage + 1}">다음 페이지</a>
+      <a href="#/page/${
+        store.currPage > 1 ? store.currPage - 1 : 1
+      }">이전 페이지</a>
+      <a href="#/page/${
+        totalPage > store.currPage ? store.currPage + 1 : store.currPage
+      }">다음 페이지</a>
     </div>
   `);
 
