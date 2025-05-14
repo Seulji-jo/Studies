@@ -26,7 +26,6 @@ function makeTemplate(src, data) {
   console.log(src, data);
   const template = Handlebars.compile(src);
   const result = template(data);
-  console.log(result);
   return result;
 }
 
@@ -91,13 +90,22 @@ function newsFeed() {
   const totalPage =
     newsFeed.length % 10 ? newsFeed.length / 10 + 1 : newsFeed.length / 10;
 
-  const templateData = {
-    // newsFeed: newsList.join(""),
-    prevPage: store.currPage > 1 ? store.currPage - 1 : 1,
-    nextPage: totalPage > store.currPage ? store.currPage + 1 : store.currPage,
-  };
+  // const templateData = {
+  //   newsFeed: newsList.join(""),
+  //   prevPage: store.currPage > 1 ? store.currPage - 1 : 1,
+  //   nextPage: totalPage > store.currPage ? store.currPage + 1 : store.currPage,
+  // };
   template = template.replace("{{newsFeed}}", newsList.join(""));
-  container.innerHTML = makeTemplate(template, templateData);
+  template = template.replace(
+    "{{prevPage}}",
+    store.currPage > 1 ? store.currPage - 1 : 1
+  );
+  template = template.replace(
+    "{{nextPage}}",
+    totalPage > store.currPage ? store.currPage + 1 : store.currPage
+  );
+
+  container.innerHTML = template;
 }
 
 function newsDetail() {
@@ -126,7 +134,7 @@ function newsDetail() {
           ${newsContent.content}
         </div>
 
-        {{comments}}
+        {{__comments__}}
 
       </div>
     </div>
@@ -158,13 +166,11 @@ function newsDetail() {
     }
     return commentStr.join("");
   }
-  // template = template.replace(
-  //   "{{__comments__}}",
-  //   makeComment(newsContent.comments)
-  // );
-  container.innerHTML = makeTemplate(template, {
-    comments: makeComment(newsContent.comments),
-  });
+  template = template.replace(
+    "{{__comments__}}",
+    makeComment(newsContent.comments)
+  );
+  container.innerHTML = template;
 }
 
 function router() {
