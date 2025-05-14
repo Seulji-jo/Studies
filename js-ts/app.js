@@ -5,6 +5,7 @@ const NEWS_URL = "https://api.hnpwa.com/v0/news/1.json";
 const CONTENT_URL = "https://api.hnpwa.com/v0/item/@id.json";
 const store = {
   currPage: 1,
+  feeds: [],
 };
 
 function getData(url) {
@@ -14,8 +15,23 @@ function getData(url) {
   return JSON.parse(ajax.response);
 }
 
+function makeFeeds(feeds) {
+  for (let i = 0; i < feeds.length; i++) {
+    feeds[i].read = false;
+  }
+  return feeds;
+}
+
+function makeTemplate(src, data) {
+  console.log(src, data);
+  const template = Handlebars.compile(src);
+  const result = template(data);
+  console.log(result);
+  return result;
+}
+
 function newsFeed() {
-  const newsFeed = getData(NEWS_URL);
+  let newsFeed = store.feeds;
   const newsList = [];
   let template = `
     <div class="bg-gray-600 min-h-screen">
@@ -26,10 +42,10 @@ function newsFeed() {
               <h1 class="font-extrabold">Hacker News</h1>
             </div>
             <div class="items-center justify-end">
-              <a href="#/page/{{__prev_page__}}" class="text-gray-500">
+              <a href="#/page/{{prevPage}}" class="text-gray-500">
                 Previous
               </a>
-              <a href="#/page/{{__next_page__}}" class="text-gray-500 ml-4">
+              <a href="#/page/{{nextPage}}" class="text-gray-500 ml-4">
                 Next
               </a>
             </div>
@@ -37,12 +53,14 @@ function newsFeed() {
         </div>
       </div>
       <div class="p-4 text-2xl text-gray-700">
-        {{__news_feed__}}        
+        {{newsFeed}}        
       </div>
     </div>
   `;
-  const totalPage =
-    newsFeed.length % 10 ? newsFeed.length / 10 + 1 : newsFeed.length / 10;
+
+  if (newsFeed.length === 0) {
+    newsFeed = store.feeds = makeFeeds(getData(NEWS_URL));
+  }
 
   for (let i = (store.currPage - 1) * 10; i < store.currPage * 10; i++) {
     newsList.push(`
@@ -70,17 +88,16 @@ function newsFeed() {
     `);
   }
 
-  template = template.replace("{{__news_feed__}}", newsList.join(""));
-  template = template.replace(
-    "{{__prev_page__}}",
-    store.currPage > 1 ? store.currPage - 1 : 1
-  );
-  template = template.replace(
-    "{{__next_page__}}",
-    totalPage > store.currPage ? store.currPage + 1 : store.currPage
-  );
+  const totalPage =
+    newsFeed.length % 10 ? newsFeed.length / 10 + 1 : newsFeed.length / 10;
 
-  container.innerHTML = template;
+  const templateData = {
+    // newsFeed: newsList.join(""),
+    prevPage: store.currPage > 1 ? store.currPage - 1 : 1,
+    nextPage: totalPage > store.currPage ? store.currPage + 1 : store.currPage,
+  };
+  template = template.replace("{{newsFeed}}", newsList.join(""));
+  container.innerHTML = makeTemplate(template, templateData);
 }
 
 function newsDetail() {
@@ -95,7 +112,7 @@ function newsDetail() {
               <h1 class="font-extrabold">Hacker News</h1>
             </div>
             <div class="items-center justify-end">
-              <a href="#/page/${store.currentPage}" class="text-gray-500">
+              <a href="#/page/${store.currPage}" class="text-gray-500">
                 <i class="fa fa-times"></i>
               </a>
             </div>
@@ -109,11 +126,18 @@ function newsDetail() {
           ${newsContent.content}
         </div>
 
-        {{__comments__}}
+        {{comments}}
 
       </div>
     </div>
   `;
+
+  for (let i = 0; i < store.feeds.length; i++) {
+    if (store.feeds[i].id === Number(id)) {
+      store.feeds[i].read = true;
+      break;
+    }
+  }
 
   function makeComment(comments, called = 0) {
     const commentStr = [];
@@ -134,11 +158,13 @@ function newsDetail() {
     }
     return commentStr.join("");
   }
-  template = template.replace(
-    "{{__comments__}}",
-    makeComment(newsContent.comments)
-  );
-  container.innerHTML = template;
+  // template = template.replace(
+  //   "{{__comments__}}",
+  //   makeComment(newsContent.comments)
+  // );
+  container.innerHTML = makeTemplate(template, {
+    comments: makeComment(newsContent.comments),
+  });
 }
 
 function router() {
