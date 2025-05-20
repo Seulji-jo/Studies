@@ -4,26 +4,26 @@ interface Store {
 }
 
 interface News {
-  id: number;
-  time_ago: string;
-  title: string;
-  url: string;
-  user: string;
-  content: string;
+  readonly id: number;
+  readonly time_ago: string;
+  readonly title: string;
+  readonly url: string;
+  readonly user: string;
+  readonly content: string;
 }
 
 interface NewsFeed extends News {
-  comments_count: number;
-  points: number;
+  readonly comments_count: number;
+  readonly points: number;
   read?: boolean;
 }
 
 interface NewsDetail extends News {
-  comments: [];
+  readonly comments: [];
 }
 interface NewsComment extends News {
-  comments: [];
-  level: number;
+  readonly comments: [];
+  readonly level: number;
 }
 
 const container: HTMLElement | null = document.getElementById("root");
