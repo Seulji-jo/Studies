@@ -36,20 +36,20 @@ const store: Store = {
   feeds: [],
 };
 
-function applyApiMixins(targetClass: any, baseClasses: any[]): void {
-  baseClasses.forEach((baseClass) => {
-    Object.getOwnPropertyNames(baseClass.prototype).forEach((name) => {
-      const descriptor = Object.getOwnPropertyDescriptor(
-        baseClass.prototype,
-        name
-      );
+// function applyApiMixins(targetClass: any, baseClasses: any[]): void {
+//   baseClasses.forEach((baseClass) => {
+//     Object.getOwnPropertyNames(baseClass.prototype).forEach((name) => {
+//       const descriptor = Object.getOwnPropertyDescriptor(
+//         baseClass.prototype,
+//         name
+//       );
 
-      if (descriptor) {
-        Object.defineProperty(targetClass.prototype, name, descriptor);
-      }
-    });
-  });
-}
+//       if (descriptor) {
+//         Object.defineProperty(targetClass.prototype, name, descriptor);
+//       }
+//     });
+//   });
+// }
 
 class Api {
   // protected: 메소드를 class외부에 감추고 싶을 경우 사용
@@ -61,57 +61,46 @@ class Api {
     return JSON.parse(ajax.response);
   }
 }
-class NewsFeedApi {
+class NewsFeedApi extends Api {
   getData(): NewsFeed[] {
     return this.getRequest<NewsFeed[]>(NEWS_URL);
   }
 }
-class NewsDetailApi {
+class NewsDetailApi extends Api {
   getData(id: string): NewsDetail {
     return this.getRequest<NewsDetail>(CONTENT_URL.replace("@id", id));
   }
 }
 
-interface NewsFeedApi extends Api {}
-interface NewsDetailApi extends Api {}
+// interface NewsFeedApi extends Api {}
+// interface NewsDetailApi extends Api {}
 
-applyApiMixins(NewsFeedApi, [Api]);
-applyApiMixins(NewsDetailApi, [Api]);
+// applyApiMixins(NewsFeedApi, [Api]);
+// applyApiMixins(NewsDetailApi, [Api]);
 
-function getData<AjaxResponse>(url: string): AjaxResponse {
-  ajax.open("GET", url, false);
-  ajax.send();
+class View {
+  template: string;
+  container: HTMLElement;
 
-  return JSON.parse(ajax.response);
-}
+  constructor(containerId: string, template: string) {
+    const containerEl = document.getElementById(containerId);
 
-function makeFeeds(feeds: NewsFeed[]): NewsFeed[] {
-  for (let i = 0; i < feeds.length; i++) {
-    feeds[i].read = false;
+    if (!containerEl) {
+      throw "최상위 컨테이너가 없어 UI를 진행하지 못합니다.";
+    }
+
+    this.container = containerEl;
+    this.template = template;
   }
-  return feeds;
-}
 
-// function makeTemplate(src, data) {
-//   console.log(src, data);
-//   const template = Handlebars.compile(src);
-//   const result = template(data);
-//   return result;
-// }
-
-function updateView(html: string): void {
-  if (container !== null) {
-    container.innerHTML = html;
-  } else {
-    console.error("최상위 컨테이너가 없어 UI를 진행하지 못합니다.");
+  updateView(html: string): void {
+    this.container.innerHTML = html;
   }
 }
 
-function newsFeed(): void {
-  const api = new NewsFeedApi();
-  let newsFeed: NewsFeed[] = store.feeds;
-  const newsList = [];
-  let template = `
+class newsFeedView extends View {
+  constructor(containerId: string) {
+    let template = `
     <div class="bg-gray-600 min-h-screen">
       <div class="bg-white text-xl">
         <div class="mx-auto px-4">
@@ -136,12 +125,19 @@ function newsFeed(): void {
     </div>
   `;
 
-  if (newsFeed.length === 0) {
-    newsFeed = store.feeds = makeFeeds(api.getData());
-  }
+    super(containerId, template);
 
-  for (let i = (store.currPage - 1) * 10; i < store.currPage * 10; i++) {
-    newsList.push(`
+    const api = new NewsFeedApi();
+    let newsFeed: NewsFeed[] = store.feeds;
+
+    if (newsFeed.length === 0) {
+      newsFeed = store.feeds = makeFeeds(api.getData());
+    }
+  }
+  render(): void {
+    const newsList = [];
+    for (let i = (store.currPage - 1) * 10; i < store.currPage * 10; i++) {
+      newsList.push(`
       <div class="p-6 ${
         newsFeed[i].read ? "bg-red-500" : "bg-white"
       } mt-6 rounded-lg shadow-md transition-colors duration-500 hover:bg-green-100">
@@ -164,34 +160,35 @@ function newsFeed(): void {
         </div>
       </div>
     `);
+    }
+
+    const totalPage =
+      newsFeed.length % 10 ? newsFeed.length / 10 + 1 : newsFeed.length / 10;
+
+    template = template.replace("{{newsFeed}}", newsList.join(""));
+    template = template.replace(
+      "{{prevPage}}",
+      String(store.currPage > 1 ? store.currPage - 1 : 1)
+    );
+    template = template.replace(
+      "{{nextPage}}",
+      String(totalPage > store.currPage ? store.currPage + 1 : store.currPage)
+    );
+
+    updateView(template);
   }
 
-  const totalPage =
-    newsFeed.length % 10 ? newsFeed.length / 10 + 1 : newsFeed.length / 10;
-
-  // const templateData = {
-  //   newsFeed: newsList.join(""),
-  //   prevPage: store.currPage > 1 ? store.currPage - 1 : 1,
-  //   nextPage: totalPage > store.currPage ? store.currPage + 1 : store.currPage,
-  // };
-  template = template.replace("{{newsFeed}}", newsList.join(""));
-  template = template.replace(
-    "{{prevPage}}",
-    String(store.currPage > 1 ? store.currPage - 1 : 1)
-  );
-  template = template.replace(
-    "{{nextPage}}",
-    String(totalPage > store.currPage ? store.currPage + 1 : store.currPage)
-  );
-
-  updateView(template);
+  makeFeeds(feeds: NewsFeed[]): NewsFeed[] {
+    for (let i = 0; i < feeds.length; i++) {
+      feeds[i].read = false;
+    }
+    return feeds;
+  }
 }
 
-function newsDetail(): void {
-  const id = location.hash.slice(7);
-  const api = new NewsDetailApi();
-  const newsContent = api.getData(id);
-  let template = `
+class NewsDetailView extends View {
+  constructor(containerId: string) {
+    let template = `
     <div class="bg-gray-600 min-h-screen pb-8">
       <div class="bg-white text-xl">
         <div class="mx-auto px-4">
@@ -219,26 +216,33 @@ function newsDetail(): void {
       </div>
     </div>
   `;
-
-  for (let i = 0; i < store.feeds.length; i++) {
-    if (store.feeds[i].id === Number(id)) {
-      store.feeds[i].read = true;
-      break;
-    }
+    super(containerId, template);
   }
 
-  template = template.replace(
-    "{{__comments__}}",
-    makeComment(newsContent.comments)
-  );
-  updateView(template);
-}
+  render() {
+    const id = location.hash.slice(7);
+    const api = new NewsDetailApi();
+    const newsContent = api.getData(id);
 
-function makeComment(comments: NewsComment[]): string {
-  const commentStr = [];
-  for (let i = 0; i < comments.length; i++) {
-    const comment: NewsComment = comments[i];
-    commentStr.push(`
+    for (let i = 0; i < store.feeds.length; i++) {
+      if (store.feeds[i].id === Number(id)) {
+        store.feeds[i].read = true;
+        break;
+      }
+    }
+
+    template = template.replace(
+      "{{__comments__}}",
+      makeComment(newsContent.comments)
+    );
+    updateView(template);
+  }
+
+  makeComment(comments: NewsComment[]): string {
+    const commentStr = [];
+    for (let i = 0; i < comments.length; i++) {
+      const comment: NewsComment = comments[i];
+      commentStr.push(`
         <div style="padding-left: ${comment.level * 40}px;" class="mt-4">
           <div class="text-gray-400">
             <i class="fa fa-sort-up mr-2"></i>
@@ -248,11 +252,19 @@ function makeComment(comments: NewsComment[]): string {
         </div>      
       `);
 
-    if (comment.comments.length) {
-      commentStr.push(makeComment(comment.comments));
+      if (comment.comments.length) {
+        commentStr.push(makeComment(comment.comments));
+      }
     }
+    return commentStr.join("");
   }
-  return commentStr.join("");
+}
+
+function getData<AjaxResponse>(url: string): AjaxResponse {
+  ajax.open("GET", url, false);
+  ajax.send();
+
+  return JSON.parse(ajax.response);
 }
 
 function router(): void {
