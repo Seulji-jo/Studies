@@ -80,7 +80,9 @@ class NewsDetailApi extends Api {
 
 class View {
   template: string;
+  renderTemplate: string;
   container: HTMLElement;
+  htmlList: string[];
 
   constructor(containerId: string, template: string) {
     const containerEl = document.getElementById(containerId);
@@ -90,15 +92,39 @@ class View {
     }
 
     this.container = containerEl;
-    this.template = template;
+    this.template = template; // 원래 값으로 되돌려 놓는 용도로 사용
+    this.renderTemplate = template;
+    this.htmlList = [];
   }
 
-  updateView(html: string): void {
-    this.container.innerHTML = html;
+  updateView(): void {
+    this.container.innerHTML = this.renderTemplate;
+    this.renderTemplate = this.template;
+  }
+
+  addHtml(htmlString: string): void {
+    this.htmlList.push(htmlString);
+  }
+
+  getHtml(): string {
+    const snapshot = this.htmlList.join("");
+    this.clearHtmlList();
+    return snapshot;
+  }
+
+  setTemplateData(key: string, value: string): void {
+    this.renderTemplate = this.renderTemplate.replace(`{{__${key}__}}`, value);
+  }
+
+  clearHtmlList(): void {
+    this.htmlList = [];
   }
 }
 
 class newsFeedView extends View {
+  api: NewsFeedApi;
+  feeds: NewsFeed[];
+
   constructor(containerId: string) {
     let template = `
     <div class="bg-gray-600 min-h-screen">
@@ -109,10 +135,10 @@ class newsFeedView extends View {
               <h1 class="font-extrabold">Hacker News</h1>
             </div>
             <div class="items-center justify-end">
-              <a href="#/page/{{prevPage}}" class="text-gray-500">
+              <a href="#/page/{{__prevPage__}}" class="text-gray-500">
                 Previous
               </a>
-              <a href="#/page/{{nextPage}}" class="text-gray-500 ml-4">
+              <a href="#/page/{{__nextPage__}}" class="text-gray-500 ml-4">
                 Next
               </a>
             </div>
@@ -120,42 +146,43 @@ class newsFeedView extends View {
         </div>
       </div>
       <div class="p-4 text-2xl text-gray-700">
-        {{newsFeed}}        
+        {{__newsFeed__}}        
       </div>
     </div>
   `;
 
     super(containerId, template);
 
-    const api = new NewsFeedApi();
-    let newsFeed: NewsFeed[] = store.feeds;
+    this.api = new NewsFeedApi();
+    this.feeds = store.feeds;
 
-    if (newsFeed.length === 0) {
-      newsFeed = store.feeds = makeFeeds(api.getData());
+    if (this.feeds.length === 0) {
+      this.feeds = store.feeds = this.api.getData();
+      this.makeFeeds();
     }
   }
+
   render(): void {
-    const newsList = [];
     for (let i = (store.currPage - 1) * 10; i < store.currPage * 10; i++) {
-      newsList.push(`
+      const { id, title, comments_count, user, points, time_ago, read } =
+        this.feeds[i];
+      this.addHtml(`
       <div class="p-6 ${
-        newsFeed[i].read ? "bg-red-500" : "bg-white"
+        read ? "bg-red-500" : "bg-white"
       } mt-6 rounded-lg shadow-md transition-colors duration-500 hover:bg-green-100">
         <div class="flex">
           <div class="flex-auto">
-            <a href="#/show/${newsFeed[i].id}">${newsFeed[i].title}</a>  
+            <a href="#/show/${id}">${title}</a>  
           </div>
           <div class="text-center text-sm">
-            <div class="w-10 text-white bg-green-300 rounded-lg px-0 py-2">${
-              newsFeed[i].comments_count
-            }</div>
+            <div class="w-10 text-white bg-green-300 rounded-lg px-0 py-2">${comments_count}</div>
           </div>
         </div>
         <div class="flex mt-3">
           <div class="grid grid-cols-3 text-sm text-gray-500">
-            <div><i class="fas fa-user mr-1"></i>${newsFeed[i].user}</div>
-            <div><i class="fas fa-heart mr-1"></i>${newsFeed[i].points}</div>
-            <div><i class="far fa-clock mr-1"></i>${newsFeed[i].time_ago}</div>
+            <div><i class="fas fa-user mr-1"></i>${user}</div>
+            <div><i class="fas fa-heart mr-1"></i>${points}</div>
+            <div><i class="far fa-clock mr-1"></i>${time_ago}</div>
           </div>  
         </div>
       </div>
@@ -163,26 +190,27 @@ class newsFeedView extends View {
     }
 
     const totalPage =
-      newsFeed.length % 10 ? newsFeed.length / 10 + 1 : newsFeed.length / 10;
+      this.feeds.length % 10
+        ? this.feeds.length / 10 + 1
+        : this.feeds.length / 10;
 
-    template = template.replace("{{newsFeed}}", newsList.join(""));
-    template = template.replace(
-      "{{prevPage}}",
+    this.setTemplateData("newsFeed", this.getHtml());
+    this.setTemplateData(
+      "prevPage",
       String(store.currPage > 1 ? store.currPage - 1 : 1)
     );
-    template = template.replace(
-      "{{nextPage}}",
+    this.setTemplateData(
+      "nextPage",
       String(totalPage > store.currPage ? store.currPage + 1 : store.currPage)
     );
 
-    updateView(template);
+    this.updateView();
   }
 
-  makeFeeds(feeds: NewsFeed[]): NewsFeed[] {
-    for (let i = 0; i < feeds.length; i++) {
-      feeds[i].read = false;
+  makeFeeds() {
+    for (let i = 0; i < this.feeds.length; i++) {
+      this.feeds[i].read = false;
     }
-    return feeds;
   }
 }
 
@@ -197,7 +225,7 @@ class NewsDetailView extends View {
               <h1 class="font-extrabold">Hacker News</h1>
             </div>
             <div class="items-center justify-end">
-              <a href="#/page/${store.currPage}" class="text-gray-500">
+              <a href="#/page/{{__currPage__}}" class="text-gray-500">
                 <i class="fa fa-times"></i>
               </a>
             </div>
@@ -206,9 +234,9 @@ class NewsDetailView extends View {
       </div>
 
       <div class="h-full border rounded-xl bg-white m-6 p-4 ">
-        <h2>${newsContent.title}</h2>
+        <h2>{{__title__}}</h2>
         <div class="text-gray-400 h-20">
-          ${newsContent.content}
+          {{__content__}}
         </div>
 
         {{__comments__}}
@@ -222,7 +250,7 @@ class NewsDetailView extends View {
   render() {
     const id = location.hash.slice(7);
     const api = new NewsDetailApi();
-    const newsContent = api.getData(id);
+    const newsDetail: NewsDetail = api.getData(id);
 
     for (let i = 0; i < store.feeds.length; i++) {
       if (store.feeds[i].id === Number(id)) {
@@ -231,18 +259,17 @@ class NewsDetailView extends View {
       }
     }
 
-    template = template.replace(
-      "{{__comments__}}",
-      makeComment(newsContent.comments)
-    );
-    updateView(template);
+    this.setTemplateData("comments", this.makeComment(newsDetail.comments));
+    this.setTemplateData("currPage", store.currPage + "");
+    this.setTemplateData("title", newsDetail.title);
+    this.setTemplateData("content", newsDetail.content);
+    this.updateView();
   }
 
   makeComment(comments: NewsComment[]): string {
-    const commentStr = [];
     for (let i = 0; i < comments.length; i++) {
       const comment: NewsComment = comments[i];
-      commentStr.push(`
+      this.addHtml(`
         <div style="padding-left: ${comment.level * 40}px;" class="mt-4">
           <div class="text-gray-400">
             <i class="fa fa-sort-up mr-2"></i>
@@ -253,10 +280,10 @@ class NewsDetailView extends View {
       `);
 
       if (comment.comments.length) {
-        commentStr.push(makeComment(comment.comments));
+        this.addHtml(this.makeComment(comment.comments));
       }
     }
-    return commentStr.join("");
+    return this.getHtml();
   }
 }
 
