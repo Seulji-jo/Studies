@@ -26,6 +26,11 @@ interface NewsComment extends News {
   readonly level: number;
 }
 
+interface RouteInfo {
+  path: string;
+  page: View;
+}
+
 const container: HTMLElement | null = document.getElementById("root");
 const ajax: XMLHttpRequest = new XMLHttpRequest();
 const content = document.createElement("div");
@@ -35,21 +40,6 @@ const store: Store = {
   currPage: 1,
   feeds: [],
 };
-
-// function applyApiMixins(targetClass: any, baseClasses: any[]): void {
-//   baseClasses.forEach((baseClass) => {
-//     Object.getOwnPropertyNames(baseClass.prototype).forEach((name) => {
-//       const descriptor = Object.getOwnPropertyDescriptor(
-//         baseClass.prototype,
-//         name
-//       );
-
-//       if (descriptor) {
-//         Object.defineProperty(targetClass.prototype, name, descriptor);
-//       }
-//     });
-//   });
-// }
 
 class Api {
   // protected: 메소드를 class외부에 감추고 싶을 경우 사용
@@ -72,13 +62,7 @@ class NewsDetailApi extends Api {
   }
 }
 
-// interface NewsFeedApi extends Api {}
-// interface NewsDetailApi extends Api {}
-
-// applyApiMixins(NewsFeedApi, [Api]);
-// applyApiMixins(NewsDetailApi, [Api]);
-
-class View {
+abstract class View {
   template: string;
   renderTemplate: string;
   container: HTMLElement;
@@ -119,9 +103,47 @@ class View {
   clearHtmlList(): void {
     this.htmlList = [];
   }
+
+  // 추상메소드(abstract): 이런 규격의 메소드를 자식 메소드들은 구현해야하는 의무가 생김
+  abstract render(): void;
 }
 
-class newsFeedView extends View {
+class Router {
+  routeTable: RouteInfo[];
+  defaultRoute: RouteInfo | null;
+
+  constructor() {
+    window.addEventListener("hashchange", this.route.bind(this));
+
+    this.routeTable = [];
+    this.defaultRoute = null;
+  }
+
+  setDefaultPage(page: View): void {
+    this.defaultRoute = { path: "", page };
+  }
+
+  addRoutePath(path: string, page: View): void {
+    this.routeTable.push({ path, page });
+  }
+
+  route() {
+    const routePath = location.hash;
+
+    if (routePath === "" && this.defaultRoute) {
+      this.defaultRoute.page.render();
+    }
+
+    for (const routeInfo of this.routeTable) {
+      if (routePath.indexOf(routeInfo.path) >= 0) {
+        routeInfo.page.render();
+        break;
+      }
+    }
+  }
+}
+
+class NewsFeedView extends View {
   api: NewsFeedApi;
   feeds: NewsFeed[];
 
@@ -163,6 +185,7 @@ class newsFeedView extends View {
   }
 
   render(): void {
+    store.currPage = Number(location.hash.slice(7) || 1);
     for (let i = (store.currPage - 1) * 10; i < store.currPage * 10; i++) {
       const { id, title, comments_count, user, points, time_ago, read } =
         this.feeds[i];
@@ -294,18 +317,13 @@ function getData<AjaxResponse>(url: string): AjaxResponse {
   return JSON.parse(ajax.response);
 }
 
-function router(): void {
-  const routePath = location.hash;
+const router: Router = new Router();
+const newsFeedView = new NewsFeedView("root");
+const newsDetailView = new NewsDetailView("root");
 
-  if (routePath === "") {
-    newsFeed();
-  } else if (routePath.indexOf("#/page/") >= 0) {
-    store.currPage = +routePath.slice(7);
-    newsFeed();
-  } else {
-    newsDetail();
-  }
-}
+router.setDefaultPage(newsFeedView);
 
-window.addEventListener("hashchange", router);
-router();
+router.addRoutePath("/page/", newsFeedView);
+router.addRoutePath("/show/", newsDetailView);
+
+router.route();
