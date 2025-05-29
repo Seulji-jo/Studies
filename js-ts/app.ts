@@ -260,7 +260,7 @@ class NewsDetailView extends View {
 
       <div class="h-full border rounded-xl bg-white m-6 p-4 ">
         <h2>{{__title__}}</h2>
-        <div class="text-gray-400 h-20">
+        <div class="text-gray-400 min-h-20">
           {{__content__}}
         </div>
 
