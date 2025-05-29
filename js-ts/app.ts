@@ -63,10 +63,11 @@ class NewsDetailApi extends Api {
 }
 
 abstract class View {
-  template: string;
-  renderTemplate: string;
-  container: HTMLElement;
-  htmlList: string[];
+  // private: 자식요소도 접근 불가능
+  private template: string;
+  private renderTemplate: string;
+  private container: HTMLElement;
+  private htmlList: string[];
 
   constructor(containerId: string, template: string) {
     const containerEl = document.getElementById(containerId);
@@ -81,26 +82,27 @@ abstract class View {
     this.htmlList = [];
   }
 
-  updateView(): void {
+  // protected: 자식요소에서만 접근 가능하게 설정
+  protected updateView(): void {
     this.container.innerHTML = this.renderTemplate;
     this.renderTemplate = this.template;
   }
 
-  addHtml(htmlString: string): void {
+  protected addHtml(htmlString: string): void {
     this.htmlList.push(htmlString);
   }
 
-  getHtml(): string {
+  protected getHtml(): string {
     const snapshot = this.htmlList.join("");
     this.clearHtmlList();
     return snapshot;
   }
 
-  setTemplateData(key: string, value: string): void {
+  protected setTemplateData(key: string, value: string): void {
     this.renderTemplate = this.renderTemplate.replace(`{{__${key}__}}`, value);
   }
 
-  clearHtmlList(): void {
+  private clearHtmlList(): void {
     this.htmlList = [];
   }
 
@@ -109,8 +111,8 @@ abstract class View {
 }
 
 class Router {
-  routeTable: RouteInfo[];
-  defaultRoute: RouteInfo | null;
+  private routeTable: RouteInfo[];
+  private defaultRoute: RouteInfo | null;
 
   constructor() {
     window.addEventListener("hashchange", this.route.bind(this));
@@ -144,8 +146,8 @@ class Router {
 }
 
 class NewsFeedView extends View {
-  api: NewsFeedApi;
-  feeds: NewsFeed[];
+  private api: NewsFeedApi;
+  private feeds: NewsFeed[];
 
   constructor(containerId: string) {
     let template = `
@@ -230,7 +232,7 @@ class NewsFeedView extends View {
     this.updateView();
   }
 
-  makeFeeds() {
+  private makeFeeds() {
     for (let i = 0; i < this.feeds.length; i++) {
       this.feeds[i].read = false;
     }
@@ -289,7 +291,7 @@ class NewsDetailView extends View {
     this.updateView();
   }
 
-  makeComment(comments: NewsComment[]): string {
+  private makeComment(comments: NewsComment[]): string {
     for (let i = 0; i < comments.length; i++) {
       const comment: NewsComment = comments[i];
       this.addHtml(`
